@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Vision IQ — Executive Market Overview</title>
+<!-- Bootstrap -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"/>
+<!-- Font Awesome -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+<!-- Dashboard styles -->
+<link rel="stylesheet" href="style.css"/>
+<!-- CDN Libraries (load before app scripts) -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<!-- Data (must load before app.js) -->
+<script src="data.js"></script>
+</head>
+<body>
+
+<!-- ── SKELETON LOADER ── -->
+<div class="skeleton-overlay" id="skeletonOverlay">
+  <div class="sk-logo">📊</div>
+  <div class="sk-title">Vision IQ</div>
+  <div class="sk-bar-wrap"><div class="sk-bar"></div></div>
+  <div class="sk-text">Loading Vision IQ Dashboard…</div>
+</div>
+
+<!-- ── PARTICLES ── -->
+<canvas id="particles"></canvas>
+
+<!-- ── TOAST ── -->
+<div class="toast-container" id="toastContainer"></div>
+
+<div class="app-shell">
+
+  <!-- ════════════════════════════════════════
+       SIDEBAR
+       ════════════════════════════════════════ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-tag">Vision IQ</div>
+      <h1>VISION<br><span>IQ</span></h1>
+      <div class="index-tag">NIFTY 100</div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Navigation</div>
+      <a class="nav-link-item" data-page="page-snapshot" onclick="navigateTo('page-snapshot');return false" href="#">
+        <span class="nav-num">1.1</span>
+        <i class="fa-solid fa-chart-line"></i>Market Snapshot
+      </a>
+      <a class="nav-link-item active glow-anim" data-page="page-sector" onclick="navigateTo('page-sector');return false" href="#">
+        <span class="nav-num">1.2</span>
+        <i class="fa-solid fa-chart-pie"></i>Sector Performance
+      </a>
+      <a class="nav-link-item" data-page="page-yoy" onclick="navigateTo('page-yoy');return false" href="#">
+        <span class="nav-num">1.3</span>
+        <i class="fa-solid fa-arrow-trend-up"></i>YoY Growth Tracker
+      </a>
+
+      <div class="nav-section-label" style="margin-top:12px">Tools</div>
+      <a class="nav-link-item" onclick="exportCSV();return false" href="#">
+        <span class="nav-num"></span>
+        <i class="fa-solid fa-file-csv"></i>Export CSV
+      </a>
+      <a class="nav-link-item" onclick="exportPDF();return false" href="#">
+        <span class="nav-num"></span>
+        <i class="fa-solid fa-file-pdf"></i>Export PDF
+      </a>
+      <a class="nav-link-item" onclick="takeSnapshot();return false" href="#">
+        <span class="nav-num"></span>
+        <i class="fa-solid fa-camera"></i>Snapshot
+      </a>
+    </nav>
+
+    <div class="sidebar-bull">
+      <div class="bull-icon">🐂</div>
+      <div class="bull-label">BULL MARKET</div>
+    </div>
+
+    <div class="sidebar-footer">
+      <div><strong>Data as of:</strong><br><span id="sidebarDate"></span></div>
+      <div style="margin-top:6px"><strong>Refresh Date:</strong><br><span id="sidebarRefresh"></span></div>
+    </div>
+  </aside>
+
+  <!-- ════════════════════════════════════════
+       MAIN CONTENT
+       ════════════════════════════════════════ -->
+  <div class="main-content">
+
+    <!-- TOP HEADER -->
+    <header class="top-header">
+      <div style="display:flex;align-items:center;gap:12px">
+        <!-- Mobile hamburger -->
+        <button class="btn-circle" id="menuBtn"
+          onclick="document.getElementById('sidebar').classList.toggle('open')"
+          style="display:none">
+          <i class="fa-solid fa-bars"></i>
+        </button>
+        <div class="header-left">
+          <h2><span id="headerNum">1.2</span> <span id="headerTitle">Sector Performance</span></h2>
+          <p id="headerSub">Analyze sector-wise performance across key financial and health metrics</p>
+        </div>
+      </div>
+      <div class="header-right">
+        <!-- Search -->
+        <div class="search-wrap">
+          <i class="fa-solid fa-magnifying-glass" style="color:var(--text-muted);font-size:11px"></i>
+          <input type="text" id="searchInput" placeholder="Search sector / company…"
+            oninput="handleSearch(this.value)"/>
+        </div>
+        <!-- Year filter -->
+        <select class="hdr-select" id="yearFilter" onchange="applyFilters()">
+          <option value="all">All Years</option>
+          <option value="2025">2025</option>
+          <option value="2024">2024</option>
+          <option value="2023">2023</option>
+          <option value="2022">2022</option>
+          <option value="2021">2021</option>
+        </select>
+        <!-- Action buttons -->
+        <button class="hdr-btn" onclick="takeSnapshot()">
+          <i class="fa-solid fa-camera"></i> <span>Snapshot</span>
+        </button>
+        <button class="hdr-btn" onclick="exportPDF()">
+          <i class="fa-solid fa-file-pdf"></i> <span>PDF</span>
+        </button>
+        <button class="hdr-btn" id="recBtn" onclick="toggleRecording()">
+          <i class="fa-solid fa-circle-dot"></i> <span>Record</span>
+        </button>
+        <button class="hdr-btn" onclick="exportCSV()">
+          <i class="fa-solid fa-download"></i> <span>CSV</span>
+        </button>
+        <button class="btn-circle" onclick="toggleTheme()" title="Toggle theme">
+          <i class="fa-solid fa-circle-half-stroke"></i>
+        </button>
+        <button class="btn-circle" title="Info">
+          <i class="fa-solid fa-circle-info"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- ══════════════════════════════════════
+         PAGE 1.1 — MARKET SNAPSHOT
+         ══════════════════════════════════════ -->
+    <div class="page" id="page-snapshot">
+      <div class="dashboard-body">
+
+        <!-- Ticker strip -->
+        <div class="market-ticker" id="tickerStrip"></div>
+
+        <!-- NIFTY trend chart -->
+        <div class="glass-card span-full" style="margin-bottom:18px">
+          <div class="card-header-bar">
+            <div class="card-title"><i class="fa-solid fa-chart-line"></i>Vision IQ &amp; SENSEX — 2025 Performance</div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <span class="card-badge">YTD 2025</span>
+              <button class="card-dl-btn" onclick="downloadChart('niftyLineChart','nifty-trend')">
+                <i class="fa-solid fa-download"></i> PNG
+              </button>
+            </div>
+          </div>
+          <div class="card-body-pad" style="height:320px">
+            <canvas id="niftyLineChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Sector health overview -->
+        <div class="glass-card span-full">
+          <div class="card-header-bar">
+            <div class="card-title"><i class="fa-solid fa-table"></i>Sector Health Overview</div>
+            <span class="card-badge">7 Sectors</span>
+          </div>
+          <div style="overflow-x:auto">
+            <table class="premium-table">
+              <thead>
+                <tr><th>Sector</th><th>Avg OPM %</th><th>Avg D/E</th><th>Avg ROE %</th><th>Health Score</th><th>Companies</th></tr>
+              </thead>
+              <tbody id="snapshotSectorBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+      <div class="dash-footer">
+        <i class="fa-solid fa-file-lines" style="color:var(--neon);margin-right:6px"></i>
+        Page 1 of 3 &nbsp;·&nbsp; Vision IQ Executive Dashboard &nbsp;·&nbsp; Data as of <span class="live-date"></span>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════
+         PAGE 1.2 — SECTOR PERFORMANCE
+         ══════════════════════════════════════ -->
+    <div class="page active" id="page-sector">
+      <div class="dashboard-body">
+
+        <!-- KPI Strip -->
+        <div class="kpi-strip">
+          <div class="kpi-card">
+            <div class="kpi-label">Total Market Revenue</div>
+            <div class="kpi-value" data-target="1496.9">0<span class="kpi-unit">K Cr</span></div>
+            <div class="kpi-change up"><i class="fa-solid fa-arrow-trend-up"></i> +12.4% YoY</div>
+            <i class="fa-solid fa-indian-rupee-sign kpi-icon"></i>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Avg Sector ROE</div>
+            <div class="kpi-value" data-target="19.1">0<span class="kpi-unit">%</span></div>
+            <div class="kpi-change up"><i class="fa-solid fa-arrow-trend-up"></i> +2.1 pts</div>
+            <i class="fa-solid fa-percent kpi-icon"></i>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Avg Health Score</div>
+            <div class="kpi-value" data-target="74.9">0<span class="kpi-unit">/100</span></div>
+            <div class="kpi-change up"><i class="fa-solid fa-arrow-trend-up"></i> +3.2 pts</div>
+            <i class="fa-solid fa-heart-pulse kpi-icon"></i>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Top Sector CAGR</div>
+            <div class="kpi-value" data-target="16.2">0<span class="kpi-unit">%</span></div>
+            <div class="kpi-change up"><i class="fa-solid fa-arrow-trend-up"></i> Healthcare</div>
+            <i class="fa-solid fa-chart-line kpi-icon"></i>
+          </div>
+        </div>
+
+        <div class="dash-grid">
+
+          <!-- 1. Grouped Bar Chart -->
+          <div class="glass-card">
+            <div class="card-header-bar">
+              <div class="card-title"><i class="fa-solid fa-chart-bar"></i>Total Sales by Sector by Year (Last 5 Years)</div>
+              <div style="display:flex;align-items:center;gap:8px">
+                <span class="card-badge">₹ Crore</span>
+                <button class="card-dl-btn" onclick="downloadChart('barChart','sales-by-sector')">
+                  <i class="fa-solid fa-download"></i> PNG
+                </button>
+              </div>
+            </div>
+            <div class="card-body-pad" style="height:310px">
+              <canvas id="barChart"></canvas>
+            </div>
+          </div>
+
+          <!-- 2. Bubble Chart -->
+          <div class="glass-card">
+            <div class="card-header-bar">
+              <div class="card-title"><i class="fa-solid fa-circle-dot"></i>Sector Profitability: Sales Growth vs ROE</div>
+              <div style="display:flex;align-items:center;gap:8px">
+                <span class="card-badge">Bubble = Revenue</span>
+                <button class="card-dl-btn" onclick="downloadChart('bubbleChart','profitability')">
+                  <i class="fa-solid fa-download"></i> PNG
+                </button>
+              </div>
+            </div>
+            <div class="card-body-pad" style="height:310px">
+              <canvas id="bubbleChart"></canvas>
+            </div>
+          </div>
+
+          <!-- 3. Sector Comparison Table -->
+          <div class="glass-card">
+            <div class="card-header-bar">
+              <div class="card-title"><i class="fa-solid fa-table"></i>Sector Comparison Metrics</div>
+              <div style="display:flex;align-items:center;gap:8px">
+                <span class="card-badge">7 Sectors</span>
+                <button class="card-dl-btn" onclick="exportCSV()">
+                  <i class="fa-solid fa-file-csv"></i> CSV
+                </button>
+              </div>
+            </div>
+            <div style="overflow-x:auto">
+              <table class="premium-table">
+                <thead>
+                  <tr><th>Sector</th><th>Avg OPM %</th><th>Avg D/E</th><th>Avg ROE %</th><th>Health Score</th><th>Companies</th></tr>
+                </thead>
+                <tbody id="sectorTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- 4. Treemap -->
+          <div class="glass-card">
+            <div class="card-header-bar">
+              <div class="card-title"><i class="fa-solid fa-th-large"></i>Total Revenue by Sector &amp; Avg Health Score</div>
+              <span class="card-badge">Size = Revenue · Color = Health</span>
+            </div>
+            <div class="treemap-grid" id="treemapGrid"></div>
+          </div>
+
+          <!-- 5. Top Companies Table -->
+          <div class="glass-card span-full">
+            <div class="card-header-bar">
+              <div class="card-title"><i class="fa-solid fa-trophy"></i>Top Ranked Companies — Vision IQ</div>
+              <div style="display:flex;align-items:center;gap:8px">
+                <span class="card-badge">Top 7</span>
+                <button class="card-dl-btn" onclick="exportCSV()">
+                  <i class="fa-solid fa-file-csv"></i> CSV
+                </button>
+              </div>
+            </div>
+            <div style="overflow-x:auto">
+              <table class="premium-table">
+                <thead>
+                  <tr><th>#</th><th>Sector</th><th>Top Company</th><th>Health Score</th><th>ROE 3Y Avg</th><th>3Y Sales CAGR</th><th>OPM %</th><th>D/E</th><th>Total Revenue</th></tr>
+                </thead>
+                <tbody id="topTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+
+        </div><!-- end dash-grid -->
+      </div><!-- end dashboard-body -->
+      <div class="dash-footer">
+        <i class="fa-solid fa-file-lines" style="color:var(--neon);margin-right:6px"></i>
+        Page 2 of 3 &nbsp;·&nbsp; Vision IQ Executive Dashboard &nbsp;·&nbsp; Data as of <span class="live-date"></span>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════
+         PAGE 1.3 — YOY GROWTH TRACKER
+         ══════════════════════════════════════ -->
+    <div class="page" id="page-yoy">
+      <div class="dashboard-body">
+
+        <!-- KPI strip for YoY -->
+        <div class="kpi-strip" style="margin-bottom:20px">
+          <div class="kpi-card">
+            <div class="kpi-label">Highest CAGR Sector</div>
+            <div class="kpi-value" style="font-size:18px">Healthcare</div>
+            <div class="kpi-change up"><i class="fa-solid fa-arrow-trend-up"></i> 16.2% avg CAGR</div>
+            <i class="fa-solid fa-syringe kpi-icon"></i>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Fastest Growing 2025</div>
+            <div class="kpi-value" style="font-size:18px">IT</div>
+            <div class="kpi-change up"><i class="fa-solid fa-arrow-trend-up"></i> 13.0% YoY</div>
+            <i class="fa-solid fa-microchip kpi-icon"></i>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Slowest Growth 2025</div>
+            <div class="kpi-value" style="font-size:18px">Oil & Gas</div>
+            <div class="kpi-change down"><i class="fa-solid fa-arrow-trend-down"></i> 3.9% YoY</div>
+            <i class="fa-solid fa-oil-well kpi-icon"></i>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Avg Market Growth</div>
+            <div class="kpi-value" data-target="10.9">0<span class="kpi-unit">%</span></div>
+            <div class="kpi-change up"><i class="fa-solid fa-arrow-trend-up"></i> 2025 YoY</div>
+            <i class="fa-solid fa-chart-line kpi-icon"></i>
+          </div>
+        </div>
+
+        <div class="yoy-grid">
+
+          <!-- YoY Line Chart -->
+          <div class="glass-card span-full">
+            <div class="card-header-bar">
+              <div class="card-title"><i class="fa-solid fa-chart-line"></i>Sector YoY Revenue Growth % (2021–2025)</div>
+              <div style="display:flex;align-items:center;gap:8px">
+                <span class="card-badge">5 Years</span>
+                <button class="card-dl-btn" onclick="downloadChart('yoyLineChart','yoy-growth-trend')">
+                  <i class="fa-solid fa-download"></i> PNG
+                </button>
+              </div>
+            </div>
+            <div class="card-body-pad" style="height:320px">
+              <canvas id="yoyLineChart"></canvas>
+            </div>
+          </div>
+
+          <!-- YoY Bar Chart -->
+          <div class="glass-card span-full">
+            <div class="card-header-bar">
+              <div class="card-title"><i class="fa-solid fa-chart-bar"></i>2025 YoY Growth by Sector</div>
+              <div style="display:flex;align-items:center;gap:8px">
+                <span class="card-badge">Latest Year</span>
+                <button class="card-dl-btn" onclick="downloadChart('yoyBarChart','yoy-2025-bar')">
+                  <i class="fa-solid fa-download"></i> PNG
+                </button>
+              </div>
+            </div>
+            <div class="card-body-pad" style="height:280px">
+              <canvas id="yoyBarChart"></canvas>
+            </div>
+          </div>
+
+        </div>
+      </div>
+      <div class="dash-footer">
+        <i class="fa-solid fa-file-lines" style="color:var(--neon);margin-right:6px"></i>
+        Page 3 of 3 &nbsp;·&nbsp; Vision IQ Executive Dashboard &nbsp;·&nbsp; Data as of <span class="live-date"></span>
+      </div>
+    </div>
+
+  </div><!-- end main-content -->
+
+</div><!-- end app-shell -->
+
+<!-- App logic (loads after DOM + data.js) -->
+<script src="app.js"></script>
+
+<script>
+  // Show hamburger on mobile
+  if (window.innerWidth <= 768) {
+    document.getElementById('menuBtn').style.display = 'flex';
+  }
+  window.addEventListener('resize', () => {
+    document.getElementById('menuBtn').style.display = window.innerWidth <= 768 ? 'flex' : 'none';
+  });
+
+  // Build snapshot page sector table (reuse same data)
+  window.addEventListener('load', () => {
+    setTimeout(() => {
+      const tbody = document.getElementById('snapshotSectorBody');
+      if (tbody) {
+        SECTOR_TABLE.forEach(row => {
+          const oC = row.opm >= 20 ? 'val-green' : row.opm >= 12 ? 'val-yellow' : 'val-red';
+          const dC = row.de  <= 0.5 ? 'val-green' : row.de  <= 1.5 ? 'val-yellow' : 'val-red';
+          const rC = row.roe >= 20 ? 'val-green' : row.roe >= 12 ? 'val-yellow' : 'val-red';
+          const hC = row.health >= 80 ? 'val-green' : row.health >= 65 ? 'val-yellow' : 'val-red';
+          const fc = row.health >= 80 ? '#19D3A2' : row.health >= 65 ? '#FFD166' : '#FF5C7A';
+          tbody.innerHTML += `<tr>
+            <td><span class="sector-pill">${row.sector}</span></td>
+            <td class="${oC}">${row.opm}%</td>
+            <td class="${dC}">${row.de}</td>
+            <td class="${rC}">${row.roe}%</td>
+            <td><div class="score-bar-wrap"><div class="score-bar-track"><div class="score-bar-fill" style="width:${row.health}%;background:${fc}"></div></div><span class="${hC}">${row.health}</span></div></td>
+            <td class="val-white">${row.cos}</td>
+          </tr>`;
+        });
+      }
+    }, 2000);
+  });
+</script>
+</body>
+</html>
